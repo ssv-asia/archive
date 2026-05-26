@@ -100,28 +100,16 @@ for k,v in all_categories.items():
         if subCatVal not in subCategories:
             subCategories[subCatVal] = []
         subCategories[subCatVal].append(k)
-        
-import math
 
-print("Final version (Sharding for Cloudflare)...")
-all_pages_list = list(all_pages.values())
-# Split into chunks of 200 pages each to stay well under the 25MB limit
-CHUNK_SIZE = 200 
-total_chunks = math.ceil(len(all_pages_list) / CHUNK_SIZE)
+print("Final version...")
+pages2 = []
+noPageMaps = {}
+for page in all_pages.values():
+    if page["disambiguation"] or len(re.sub("[\\s0-9]{2,4}", "", page["text"])) == 0 or re.match("^[0-9]{2,4}s?$", page["title"]) or (":" in page["title"] and page["title"].lower().split(":")[0] in ["module","category","template","wikimedia","mediawiki","wikipedia","help"]):
+        noPageMaps[page["id"]] = page["title"]
+        continue
+    pages2.append([page["title"],page["id"],page["text"],page["thumb"],page["categories"],links[page["id"]] if page["id"] in links else []])
+# pages2.sort(key=lambda x:x[0])
 
-for i in range(total_chunks):
-    chunk = all_pages_list[i*CHUNK_SIZE : (i+1)*CHUNK_SIZE]
-    pages2 = []
-    noPageMaps = {}
-    
-    for page in chunk:
-        # (Keep your existing filtering logic here)
-        if page["disambiguation"] or len(re.sub("[\\s0-9]{2,4}", "", page["text"])) == 0 or re.match("^[0-9]{2,4}s?$", page["title"]) or (":" in page["title"] and page["title"].lower().split(":")[0] in ["module","category","template","wikimedia","mediawiki","wikipedia","help"]):
-            noPageMaps[page["id"]] = page["title"]
-            continue
-        pages2.append([page["title"],page["id"],page["text"],page["thumb"],page["categories"],links.get(page["id"], [])])
-
-    filename = f"smoldata_{i}.json"
-    with open(filename, "w") as f:
-        json.dump({"pages": pages2, "noPageMaps": noPageMaps, "subCategories": subCategories if i == 0 else {}}, f, separators=(',', ':'))
-    print(f"Exported {filename}")
+with open(OUT_JSON, "w") as f:
+    json.dump({"pages": pages2, "noPageMaps": noPageMaps, "subCategories": subCategories}, f, separators=(',', ':'))
