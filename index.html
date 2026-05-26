@@ -655,7 +655,7 @@
 
     window.swReg = null;
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/sw.js").then(reg => window.swReg = reg).catch(err => {
+        navigator.serviceWorker.register("./sw.js").then(reg => window.swReg = reg).catch(err => {
             window.swReg = "err";
             console.error(`Registration failed with ${err}`);
         });
@@ -736,7 +736,7 @@
     const settings = loadSettings();
 
     const DATA_SIZE = settings.dataSize;
-    const DATA_URL = `smoldata.json?${DATA_SIZE}`;
+    const DATA_URL = `./smoldata.json?${DATA_SIZE}`;
 
     const startBtn = document.getElementById("startBtn");
     const categoryPickList = document.getElementById("categoryPickList");
