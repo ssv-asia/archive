@@ -736,7 +736,7 @@
     const settings = loadSettings();
 
     const DATA_SIZE = settings.dataSize;
-    const DATA_URL = `smoldata.json?${DATA_SIZE}`;
+    
 
     const startBtn = document.getElementById("startBtn");
     const categoryPickList = document.getElementById("categoryPickList");
@@ -1153,21 +1153,7 @@ async function* streamToAsyncIterable(stream) {
         }
     }
 
-    async function getFileWithProgress(url) {
-        const resp = await fetch(url, {cache: "force-cache"});
-        let responseSize = 0;
-        const bytes = new Uint8Array(DATA_SIZE);
-        for await (const chunk of streamToAsyncIterable(resp.body)) {
-            if (Math.floor(responseSize/DATA_SIZE*100) < Math.floor((responseSize+chunk.length)/DATA_SIZE*100))
-                startBtn.innerText = `Xikipedia is loading... (${Math.floor(responseSize/DATA_SIZE*100)}% of 34MB loaded)`;
-            bytes.set(chunk, responseSize);
-            responseSize += chunk.length;
-        }
-        startBtn.innerText = `Xikipedia is loading... (100% of 34MB loaded)`;
-        await new Promise(requestAnimationFrame);
-        await new Promise(requestAnimationFrame);
-        return JSON.parse(new TextDecoder().decode(bytes));
-    }
+ 
 
     async function checkVersionAsync() {
         try {
@@ -1222,13 +1208,25 @@ async function* streamToAsyncIterable(stream) {
         loadStatus("loading data");
         //setTimeout(()=>downloadFinished||loadStatus("this might take a minute on some connections"),5000)
         //const smoldata = await (await fetch("smoldata.json")).json();
-        const smoldata = await getFileWithProgress(DATA_URL);
-        downloadFinished = true;
+// --- NEW SHARDED LOADING LOGIC ---
+const SHARD_COUNT = 5; // Ensure this matches your number of files
+let smoldata = { pages: [], noPageMaps: {}, subCategories: {} };
 
-        const subCategories = smoldata.subCategories;
-        noPageMaps = smoldata.noPageMaps;
-        delete smoldata.subCategories;
-        delete smoldata.noPageMaps;
+for (let i = 0; i < SHARD_COUNT; i++) {
+    const response = await fetch(`smoldata_${i}.json`);
+    const chunk = await response.json();
+    
+    smoldata.pages.push(...chunk.pages);
+    Object.assign(smoldata.noPageMaps, chunk.noPageMaps);
+    if (chunk.subCategories) Object.assign(smoldata.subCategories, chunk.subCategories);
+    
+    loadStatus(`Loaded chunk ${i + 1}/${SHARD_COUNT}`);
+}
+downloadFinished = true;
+
+const subCategories = smoldata.subCategories;
+noPageMaps = smoldata.noPageMaps;
+// ---------------------------------
 
         let i = 0;
         const wikiLen = smoldata.pages.length;
